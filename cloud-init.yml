@@ -1,0 +1,30 @@
+#cloud-config
+users:
+  - name: ubuntu
+    groups: sudo
+    shell: /bin/bash
+    sudo: ["ALL=(ALL) NOPASSWD:ALL"]
+    ssh_authorized_keys: 
+      - ${ssh_public_key}
+package_update: true
+package_upgrade: false
+packages:
+  - curl
+  - git
+  - jq
+runcmd:
+  - sudo echo "ubuntu:Qwerty1" | sudo chpasswd
+  - curl -fsSL https://get.docker.com | sh
+  - usermod -aG docker ubuntu
+  - systemctl enable docker
+  - echo '{"max-concurrent-uploads":1}' > /etc/docker/daemon.json
+  - systemctl restart docker
+  - git clone https://github.com/Legend1Demp8/netology-python /home/ubuntu/app
+  - chown -R ubuntu:ubuntu /home/ubuntu/app
+  - |
+    cd /home/ubuntu/app && \
+    IAM_TOKEN=$(curl -s --fail -H "Metadata-Flavor: Google" http://169.254.169.254/computeMetadata/v1/instance/service-accounts/default/token | jq -r .access_token) && \
+    echo "$IAM_TOKEN" | docker login --username iam --password-stdin cr.yandex && \
+    DOCKER_BUILDKIT=0 docker build -t cr.yandex/${registry_id}/flask-web-app:v1.0.0 . && \
+    docker push cr.yandex/${registry_id}/flask-web-app:v1.0.0
+  - docker run -d --name flask-app --restart unless-stopped -p 80:5000 -e DB_HOST="${db_host}" -e DB_NAME="${db_name}" -e DB_USER="${db_user}" -e DB_PASSWORD="${db_password}" cr.yandex/${registry_id}/flask-web-app:v1.0.0
