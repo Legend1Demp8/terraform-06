@@ -8,6 +8,6 @@ data "template_file" "cloudinit" {
     db_host        = one(one(values(yandex_mdb_mysql_cluster.cluster)).host).fqdn
     db_name        = one(values(yandex_mdb_mysql_database.db)).name
     db_user        = one(values(yandex_mdb_mysql_user.user)).name
-    db_password    = yandex_lockbox_secret_version.mysql_password_v1.entries[0].text_value
+    db_password    = one([for entry in yandex_lockbox_secret_version.mysql_password_v1.entries : entry.text_value if entry.key == "password"])
   }
 }

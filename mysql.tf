@@ -41,7 +41,8 @@ resource "yandex_mdb_mysql_user" "user" {
 
   cluster_id = yandex_mdb_mysql_cluster.cluster[each.value.cluster_key].id
   name       = each.value.username
-  password   = yandex_lockbox_secret_version.mysql_password_v1.entries[0].text_value
+  password   = one([for entry in yandex_lockbox_secret_version.mysql_password_v1.entries : entry.text_value if entry.key == "password"]) 
+  #password   = yandex_lockbox_secret_version.mysql_password_v1.entries[0].text_value
 
   dynamic "permission" {
     for_each = [for db in var.mysql_databases : db if db.cluster_key == each.value.cluster_key]
@@ -50,5 +51,8 @@ resource "yandex_mdb_mysql_user" "user" {
       roles         = each.value.roles        
     }
   }
+  depends_on = [
+    yandex_mdb_mysql_database.db
+  ]
 }
 
